@@ -18,7 +18,6 @@ import math
 import numpy as np
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 from torch_geometric.nn import GatedGraphConv
 
 
@@ -54,7 +53,7 @@ class SR_GNN(nn.Module):
     # From https://github.com/CRIPAC-DIG/SR-GNN/blob/master/pytorch_code/model.py
     def reset_parameters(self):
 
-        stdv = 1.0 / math.sqrt(self.hidden_size)
+        stdv = 1.0 / math.sqrt(self.n_hidden)
         for weight in self.parameters():
             weight.data.uniform_(-stdv, stdv)
 
@@ -84,8 +83,8 @@ class SR_GNN(nn.Module):
         v_n = torch.cat(v_n, dim=0)
 
         # (6)
-        alpha = self.q(F.sigmoid(self.W_1(v_n) + self.W_2(v)))
-        s_g_split = torch.split(alpha * s_l, list(n_items_in_sessions))
+        alpha = self.q(torch.sigmoid(self.W_1(v_n) + self.W_2(v)))
+        s_g_split = torch.split(alpha * v, list(n_items_in_sessions))
 
         s_g = []
         for s in s_g_split:
@@ -115,8 +114,6 @@ def train(model, train_data_loader, device, top_k, validation_data_loader=None):
     y_pred = []
 
     for epoch in range(model.max_epoch):
-        model.scheduler.step()
-
         for i, batch in enumerate(train_data_loader):
             # Forward step
             scores = model(batch.to(device))
@@ -131,15 +128,18 @@ def train(model, train_data_loader, device, top_k, validation_data_loader=None):
             # Update the variables according to the optimizer and the gradients calculated by the above loss function
             model.optimizer.step()
 
-        if validation_data_loader:
-            with torch.no_grad():
-                hit, mrr = test(model, validation_data_loader, device, top_k)
-            print('Epoch:', epoch + 1, 'Train Loss:', train_loss.item(), 'Top', top_k, 'Precision:', hit,
-                  'Mean Reciprocal Rank', mrr)
-        else:
-            print('Epoch:', epoch + 1, 'Train Loss:', train_loss.item())
+            if i % 1000 == 0:
+                if validation_data_loader:
+                    with torch.no_grad():
+                        hit, mrr = test(model, validation_data_loader, device, top_k)
+                    print('Epoch:', epoch + 1, 'Batch:', i + 1, 'Train Loss:', train_loss.item(), 'Top', top_k, 'Precision:', hit,
+                          'Mean Reciprocal Rank:', mrr)
+                else:
+                    print('Epoch:', epoch + 1, 'Batch:', i + 1, 'Train Loss:', train_loss.item())
 
         model.training_loss.append(train_loss.item())
+
+        model.scheduler.step()
 
 
 # Test function
