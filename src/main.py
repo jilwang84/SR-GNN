@@ -18,6 +18,7 @@ parser.add_argument('--batch_size', type=int, default=100, help='input batch siz
 parser.add_argument('--n_hid', type=int, default=100, help='hidden state size')
 parser.add_argument('--top_k', type=int, default=10, help='eval on top k items')
 parser.add_argument('--cuda', type=bool, default=False, action='store_true', help='if true and if cuda exist, use cuda')
+parser.add_argument('--validation', action='store_true', help='validation')
 parser.add_argument('--valid_portion', type=float, default=0.1, help='split the portion of training set as validation set')
 # Optim config
 parser.add_argument('--epoch', type=int, default=30, help='the number of epochs to train for')
@@ -34,18 +35,20 @@ args = parser.parse_args()
 
 def main():
     train_data = pickle.load(open('../datasets/' + args.dataset + '/train.txt', 'rb'))
-    train_data, valid_data = split_validation(train_data, args.valid_portion)
-    test_data = pickle.load(open('../datasets/' + args.dataset + '/test.txt', 'rb'))
+    if args.validation:
+        train_data, valid_data = split_validation(train_data, args.valid_portion)
+        test_data = valid_data
+    else:
+        test_data = pickle.load(open('../datasets/' + args.dataset + '/test.txt', 'rb'))
 
 
     train_data = SessionDataset(args.dataset, train_data, shuffle=True)
-    valid_data = SessionDataset(args.dataset, valid_data, shuffle=False)
     test_data = SessionDataset(args.dataset, test_data, shuffle=False)
 
     train_data_loader = DataLoader(train_data, args.batch_size)
-    valid_data_loader = DataLoader(valid_data, args.batch_size)
     test_data_loader = DataLoader(test_data, args.batch_size)
 
+    # Will be changed later after preprocess.py is finished
     if args.dataset == 'diginetica':
         n_node = 43098
     elif args.dataset == 'yoochoose1_64' or args.dataset == 'yoochoose1_4':
@@ -62,11 +65,9 @@ def main():
     
     start = time.time()
     print('Start Training--------------------------------------------------------')
-    train(model, train_data_loader, device, args.top_k, valid_data_loader)
+    train(model, train_data_loader, device, args.top_k, test_data_loader)
     print('Finish Training-------------------------------------------------------')
-    print('Start Training--------------------------------------------------------')
-    test(model, test_data_loader, device, args.top_k)
-    print('Finish Training-------------------------------------------------------')
+
     end = time.time()
     print("Run time: %f s" % (end - start))
 
