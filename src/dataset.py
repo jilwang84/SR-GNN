@@ -3,15 +3,34 @@
 
 from collections import defaultdict
 import torch
-from pathlib import PurePath
 from torch_geometric.data import Data
 from torch.utils.data import Dataset
 import numpy as np
+
 
 def max_n_node(all_usr_pois):
     us_lens = [len(np.unique(upois).tolist()) for upois in all_usr_pois]
     len_max = max(us_lens)
     return len_max
+
+
+def split_validation(train_set, valid_portion):
+    """
+    This function is used before sending data into Session dataset
+
+    """
+    train_set_x, train_set_y = train_set
+    n_samples = len(train_set_x)
+    sidx = np.arange(n_samples, dtype='int32')
+    np.random.shuffle(sidx)
+    n_train = int(np.round(n_samples * (1. - valid_portion)))
+    valid_set_x = [train_set_x[s] for s in sidx[n_train:]]
+    valid_set_y = [train_set_y[s] for s in sidx[n_train:]]
+    train_set_x = [train_set_x[s] for s in sidx[:n_train]]
+    train_set_y = [train_set_y[s] for s in sidx[:n_train]]
+
+    return (train_set_x, train_set_y), (valid_set_x, valid_set_y)
+
 
 class SessionDataset(Dataset):
     def __init__(self, name, data, 
