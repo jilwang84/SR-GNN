@@ -3,6 +3,7 @@ import argparse
 import pickle
 import time
 from dataset import *
+from torch_geometric.loader import DataLoader
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--dataset', default='sample', help='dataset name: diginetica/yoochoose1_4/yoochoose1_64/sample')
@@ -32,6 +33,9 @@ def main():
     print(train_data_norm[idx].edge_index)
     print(train_data_norm[idx].edge_weight)
     print(train_data_norm[idx].n_node)
+
+    loader = DataLoader(train_data, 100)
+    print(loader)
 
 if __name__ == '__main__':
     main()

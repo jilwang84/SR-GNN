@@ -18,6 +18,7 @@ import math
 import numpy as np
 import torch
 import torch.nn as nn
+import torch.optim as optim
 from torch_geometric.nn import GatedGraphConv
 
 
@@ -27,7 +28,8 @@ class SR_GNN(nn.Module):
     # loss_function: nn.CrossEntropyLoss()
     # optimizer: torch.optim.Adam(self.parameters(), lr=args.lr, weight_decay=args.wd)
     # scheduler: torch.optim.lr_scheduler.StepLR(optimizer, step_size=args.step, gamma=args.gamma)
-    def __init__(self, n_hid, n_node, epoch, loss_function, optimizer, scheduler):
+    def __init__(self, n_hid, n_node, epoch,
+                lr, l2, lr_dc_step, lr_dc):
         super(SR_GNN, self).__init__()
         nn.Module.__init__(self)
 
@@ -43,9 +45,12 @@ class SR_GNN(nn.Module):
         self.W_3 = nn.Linear(2 * self.n_hidden, self.n_hidden)
 
         self.max_epoch = epoch
-        self.loss_function = loss_function
-        self.optimizer = optimizer
-        self.scheduler = scheduler
+        # self.loss_function = loss_function
+        # self.optimizer = optimizer
+        # self.scheduler = scheduler
+        self.loss_function = nn.CrossEntropyLoss()
+        self.optimizer = optim.Adam(self.parameters(), lr=lr, weight_decay=l2)
+        self.scheduler = optim.lr_scheduler.StepLR(self.optimizer, step_size=lr_dc_step, gamma=lr_dc)
         self.training_loss = []
 
         self.reset_parameters()
