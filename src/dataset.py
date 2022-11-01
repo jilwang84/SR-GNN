@@ -33,8 +33,7 @@ def split_validation(train_set, valid_portion):
 
 
 class SessionDataset(Dataset):
-    def __init__(self, name, data, 
-        total_n_node: int = None, need_shuffle : bool = False, need_norm: bool = False):
+    def __init__(self, name, data, total_n_node: int = None, need_shuffle: bool = False, need_norm: bool = False):
         super(SessionDataset, self).__init__()
         self.name = name
         self.data = data[0]

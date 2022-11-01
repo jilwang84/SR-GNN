@@ -28,8 +28,7 @@ class SR_GNN(nn.Module):
     # loss_function: nn.CrossEntropyLoss()
     # optimizer: torch.optim.Adam(self.parameters(), lr=args.lr, weight_decay=args.wd)
     # scheduler: torch.optim.lr_scheduler.StepLR(optimizer, step_size=args.step, gamma=args.gamma)
-    def __init__(self, n_hid, n_node, epoch,
-                lr, l2, lr_dc_step, lr_dc):
+    def __init__(self, n_hid, n_node, epoch=30, lr=0.001, l2=1e-5, lr_dc_step=3, lr_dc=0.1):
         super(SR_GNN, self).__init__()
         nn.Module.__init__(self)
 
@@ -116,15 +115,15 @@ def train(model, train_data_loader, device, top_k, validation_data_loader=None):
     model.train()
 
     # Initialize data components
-    y_pred = []
 
     for epoch in range(model.max_epoch):
+        train_loss = -1
         for i, batch in enumerate(train_data_loader):
             # Forward step
-            scores = model(batch.to(device))
+            y_pred = model(batch.to(device))
 
             # Calculate the training loss
-            train_loss = model.loss_function(scores, batch.y - 1)
+            train_loss = model.loss_function(y_pred, batch.y - 1)
             model.optimizer.zero_grad()
 
             # Backward step: error backpropagation
@@ -137,8 +136,8 @@ def train(model, train_data_loader, device, top_k, validation_data_loader=None):
                 if validation_data_loader:
                     with torch.no_grad():
                         hit, mrr = test(model, validation_data_loader, device, top_k)
-                    print('Epoch:', epoch + 1, 'Batch:', i + 1, 'Train Loss:', train_loss.item(), 'Top', top_k, 'Precision:', hit,
-                          'Mean Reciprocal Rank:', mrr)
+                    print('Epoch:', epoch + 1, 'Batch:', i + 1, 'Train Loss:', train_loss.item(), 'Top', top_k,
+                          'Precision:', hit, 'Mean Reciprocal Rank:', mrr)
                 else:
                     print('Epoch:', epoch + 1, 'Batch:', i + 1, 'Train Loss:', train_loss.item())
 
@@ -148,14 +147,14 @@ def train(model, train_data_loader, device, top_k, validation_data_loader=None):
 
 
 # Test function
-def test(model, validation_data_loader, device, top_k):
+def test(model, test_data_loader, device, top_k):
 
     # Switch to testing mode
     model.eval()
 
     hit, mrr = [], []
 
-    for i, batch in enumerate(validation_data_loader):
+    for i, batch in enumerate(test_data_loader):
         # Forward step
         scores = model(batch.to(device))
         labels = batch.y - 1
