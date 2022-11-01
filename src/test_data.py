@@ -15,7 +15,7 @@ print(opt)
 
 
 def main():
-    data = pickle.load(open('../sample/' + 'train.txt', 'rb'))
+    data = pickle.load(open('../datasets/retailrocket/' + 'train.txt', 'rb'))
     train_data = SessionDataset('sample', data)
 
     length = len(train_data)

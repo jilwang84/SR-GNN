@@ -44,11 +44,13 @@ class SessionDataset(Dataset):
         self.need_shuffle = need_shuffle
         self.need_norm = need_norm
 
-        if need_shuffle:
-            shuffle_range = np.range(self.total_n_graph)
-            np.random.shuffle(shuffle_range)
-            self.data = self.data[shuffle_range]
-            self.targets = self.targets[shuffle_range]
+        # TODO: AttributeError: module 'numpy' has no attribute 'range'
+        # shuffle can be done in DataLoader?
+        #if need_shuffle:
+        #    shuffle_range = np.range(self.total_n_graph)
+        #    np.random.shuffle(shuffle_range)
+        #    self.data = self.data[shuffle_range]
+        #    self.targets = self.targets[shuffle_range]
 
     def __len__(self):
         return self.total_n_graph
@@ -83,9 +85,9 @@ class SessionDataset(Dataset):
             _out.append(v)
             if self.need_norm:
                 _in_c[u] += 1
-        nodes = torch.tensor(nodes, dtype=torch.float64)
+        nodes = torch.tensor(nodes, dtype=torch.long).unsqueeze(1)
         edge_index = torch.tensor(np.vstack((np.array(_in), np.array(_out))), dtype=torch.long)
-        target = torch.tensor(target, dtype=torch.float64)
+        target = torch.tensor(target, dtype=torch.long)
         
         if self.need_norm:
             # If zero length return zero length 
@@ -98,5 +100,4 @@ class SessionDataset(Dataset):
 
         graph = Data(x=nodes, edge_index=edge_index, y=target, n_node=n_node)            
         return graph
-
 

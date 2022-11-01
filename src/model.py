@@ -115,7 +115,6 @@ def train(model, train_data_loader, device, top_k, validation_data_loader=None):
     model.train()
 
     # Initialize data components
-
     for epoch in range(model.max_epoch):
         train_loss = -1
         for i, batch in enumerate(train_data_loader):
@@ -123,7 +122,7 @@ def train(model, train_data_loader, device, top_k, validation_data_loader=None):
             y_pred = model(batch.to(device))
 
             # Calculate the training loss
-            train_loss = model.loss_function(y_pred, batch.y - 1)
+            train_loss = model.loss_function(y_pred, batch.y.to(device) - 1)
             model.optimizer.zero_grad()
 
             # Backward step: error backpropagation

@@ -1,4 +1,5 @@
 # Copyright (c) 2022-Current TANG Tianhao <tth502025390@gmail.com>
+# Copyright (c) 2022-Current Jialiang Wang <jilwang804@gmail.com>
 # License: TBD
 
 import argparse
@@ -76,32 +77,30 @@ def main():
     valid_data_loader = None
     if not args.fast_mode:
         train_data, valid_data = split_validation(train_data, args.valid_portion)
-        valid_data = SessionDataset(args.dataset, valid_data, need_shuffle=True)
-        valid_data_loader = DataLoader(valid_data, args.batch_size)
+        valid_data = SessionDataset(args.dataset, valid_data)
+        valid_data_loader = DataLoader(valid_data, args.batch_size, shuffle=False)
 
 
     test_data = pickle.load(open('../datasets/' + args.dataset + '/test.txt', 'rb'))
-    train_data = SessionDataset(args.dataset, train_data, need_shuffle=True)
-    test_data = SessionDataset(args.dataset, test_data, need_shuffle=False)
-    train_data_loader = DataLoader(train_data, args.batch_size)
-    test_data_loader = DataLoader(test_data, args.batch_size)
+    train_data = SessionDataset(args.dataset, train_data)
+    test_data = SessionDataset(args.dataset, test_data)
+    train_data_loader = DataLoader(train_data, args.batch_size, shuffle=True)
+    test_data_loader = DataLoader(test_data, args.batch_size, shuffle=False)
 
     # TODO Will be changed later after preprocess.py is finished
     if args.dataset == 'diginetica':
         n_node = 43098
     elif args.dataset == 'yoochoose1_64' or args.dataset == 'yoochoose1_4':
         n_node = 37484
+    elif args.dataset == 'retailrocket':
+        n_node = 466868
     else:
-        n_node = 310
+        n_node = 0
 
     # ---- Parameter Section -------------------------------
-    device = torch.device('cuda') if args.cuda else torch.device('cpu')
+    device = torch.device('cuda') if args.use_cuda else torch.device('cpu')
     # Usage: SR_GNN(n_hid, n_node, epoch, lr, l2, lr_dc_step, lr_dc)
     model = SR_GNN(args.n_hid, n_node, args.epoch, args.lr, args.l2, args.lr_dc_step, args.lr_dc).to(device)
-
-    train_data_loader = train_data_loader.to(device)
-    test_data_loader = test_data_loader.to(device)
-    valid_data_loader = valid_data_loader.to(device) if not args.fast_mode else None
     # ------------------------------------------------------
 
     # ---- Training Section --------------------------------
