@@ -32,7 +32,7 @@ parser.add_argument('--test_portion', type=float, default=0.1, help='split the p
 parser.add_argument('--train_fraction', type=float, default=1, help='training fraction, in the paper uses 4 and 64')
 parser.add_argument('--item_threshold', type=int, default = 5, help='the parameter represents the number of frequencies that item should have for not being filtered')
 parser.add_argument('--dataset', default='sample_train-item-views', help='dataset name')
-parser.add_argument('--path', default='sample_train-item-views.csv', help='the relevant path of the data file')
+parser.add_argument('--path', default='sample_train-item-views.csv', help='the path of the data file')
 opt = parser.parse_args()
 print(opt)
 
@@ -69,7 +69,7 @@ with open(path, "r") as f:
     ctr = 0
     curid = -1
     if(dataset == "clef"):
-        reader = csv.DictReader(f, delimiter = ";", fieldnames=["Session_id", "Date", "Timestamp", "Item_id"])
+        reader = csv.DictReader(f, delimiter = ";", fieldnames=["Session_id", "Item_id", "Timestamp"])
         for data in reader:
             sessionId = data["Session_id"]
             curid = sessionId
