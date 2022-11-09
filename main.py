@@ -2,6 +2,10 @@
 # Copyright (c) 2022-Current Jialiang Wang <jilwang804@gmail.com>
 # License: TBD
 
+import os
+os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+import logging
+from datetime import datetime
 import argparse
 import pickle
 import time
@@ -14,6 +18,9 @@ from src.dataset import SessionDataset, split_validation
 from src.model import SR_GNN, train, test
 from src.result_saver import Result_Saver, save_training_loss
 
+if not os.path.exists('./log'):
+    os.mkdir('./log')
+time_format = "%Y-%b-%d_%H-%M-%S"
 
 # ---- Session-based Recommendation with Graph Neural Networks Script ----
 if 1:
@@ -22,8 +29,9 @@ if 1:
 
     # General config
     parser.add_argument('--dataset', type=str, default='retailrocket',
-                        choices=['diginetica', 'yoochoose1_4', 'yoochoose1_64', 'retailrocket'],
-                        help='dataset name: diginetica/yoochoose1_4/yoochoose1_64/retailrocket.')
+                        choices=['sample', 'diginetica', 'yoochoose1_4', 'yoochoose1_64', 'retailrocket', 
+                        '30music', 'rsc15', 'aotm', 'clef', 'nowplaying', 'tmall', 'xing'],
+                        help='dataset name: diginetica/yoochoose1_4/yoochoose1_64/retailrocket/30music/rsc15/aotm/clef/nowplaying/tmall/xing.')
     parser.add_argument('--train_fraction', type=int, default=1,
                         help='Will search train.txt and test.txt in folder datasets/dataset_name/Train_Fraction_*/')
     parser.add_argument('--batch_size', type=int, default=100,
@@ -70,12 +78,23 @@ if 1:
         print('CUDA:', args.use_cuda, ' Seed:', args.seed)
     else:
         print('CUDA:', args.use_cuda)
+
+    # Initialize the logger
+    logging_file_name = './log/' + datetime.now().strftime(time_format) + '_' + args.dataset + '.log'
+    logging.basicConfig(filename=logging_file_name, format='[%(asctime)s][%(levelname)s] - %(message)s', 
+                            datefmt="%m/%d/%Y %H:%M:%S %p", level=logging.INFO)
+    logger = logging.getLogger()
+
+    logger.info("Arguments: " + str(args))
     # ------------------------------------------------------
 
 
 def main():
+
+
     # ---- Objection Initialization Section ----------------
     print('************ Initialization ************')
+    logger.info('************ Initialization ************')
     # Loading dataset
     train_data = pickle.load(
         open('datasets/' + args.dataset + '/Train_Fraction_' + str(args.train_fraction) + '/train.txt', 'rb'))
@@ -85,6 +104,7 @@ def main():
         valid_data = SessionDataset(args.dataset, valid_data)
         valid_data_loader = DataLoader(valid_data, args.batch_size, shuffle=False)
 
+    logger.info('Loading data done.')
     # Loading training and testing data
     test_data = pickle.load(
         open('datasets/' + args.dataset + '/Train_Fraction_' + str(args.train_fraction) + '/test.txt', 'rb'))
@@ -93,6 +113,7 @@ def main():
     train_data_loader = DataLoader(train_data, args.batch_size, shuffle=True)
     test_data_loader = DataLoader(test_data, args.batch_size, shuffle=False)
 
+    logger.info('Prepare dataloader done.')
     # Prepare model saver
     result_saver = Result_Saver('SR-GNN Model Saver', 'Model Parameters')
     result_saver.result_destination_file_path = 'results/SR-GNN_' + args.dataset + '_model'
@@ -100,6 +121,8 @@ def main():
     # Read the number of nodes from the file
     f = open('datasets/' + args.dataset + '/Train_Fraction_' + str(args.train_fraction) + '/number_of_node.txt', 'r')
     n_node = int(f.readline())
+
+    logger.info('Number of nodes in this dataset: %d' % n_node)
 
     # ---- Parameter Section -------------------------------
     device = torch.device('cuda') if args.use_cuda else torch.device('cpu')
@@ -110,30 +133,37 @@ def main():
     # ---- Training Section --------------------------------
     start = time.time()
     print('************ Training Start ************')
-    train(model, train_data_loader, device, args.top_k, valid_data_loader, result_saver)
+    logger.info('************ Training Start ************')
+    train(model, train_data_loader, device, args.top_k, valid_data_loader, result_saver, logger)
     print('************ Training End **************')
-
+    logger.info('************ Training End **************')
     end = time.time()
     print("Run time: %f s" % (end - start))
+    logger.info("Run time: %f s" % (end - start))
 
     # Training loss plot
-    save_training_loss(model.training_loss, 'results/SR-GNN_' + args.dataset + '_training_loss.txt')
+    save_training_loss(model.training_loss, 'results/SR-GNN_' + datetime.now().strftime(time_format) + '_' + args.dataset + '_training_loss.txt')
     plt.figure(figsize=(10, 5))
     plt.title("Training Loss")
     plt.plot(model.training_loss)
     plt.xlabel("Epoch")
     plt.ylabel("Loss")
-    plt.show()
+    # plt.show() # Dont show immediately, since the show would pause the running
+    plt.savefig('./results/' + datetime.now().strftime(time_format) + '_' + args.dataset + '_training_loss.png')
 
     print('************ Training End **************')
     # ------------------------------------------------------
 
     # ---- Testing Section ---------------------------------
     print('************ Testing Start *************')
-    hit, mrr = test(model, test_data_loader, device, args.top_k, 'results/SR-GNN_' + args.dataset + '_model.pth')
+    logger.info('************ Testing Start *************')
+    hit, mrr = test(model, test_data_loader, device, args.top_k, 'results/SR-GNN_' + args.dataset + '_model.pth', logger)
     print('************ Overall Performance *******')
+    logger.info('************ Overall Performance *******')
     print('SR-GNN Precision:', str(hit), 'Mean Reciprocal Rank:', str(mrr))
+    logger.info('SR-GNN Precision: ' + str(hit) + ' Mean Reciprocal Rank: ' + str(mrr))
     print('************ Finish ********************')
+    logger.info('************ Finish ********************')
     # ------------------------------------------------------
 
 
