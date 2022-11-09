@@ -36,7 +36,7 @@ parser.add_argument('--path', default='sample_train-item-views.csv', help='the p
 opt = parser.parse_args()
 print(opt)
 
-if(opt.dataset in ["30music", "atom", "nowplaying", "tmall", "rsc15"]):
+if(opt.dataset in ["30music", "aotm", "nowplaying", "tmall", "rsc15"]):
     argument = ["\t", "UserId", "SessionId", "ItemId", "Time"]
 elif(opt.dataset in ["xing"]):
     argument = ["\t", "user_id", "user_id", "item_id", "created_at"]

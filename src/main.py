@@ -1,7 +1,9 @@
 # Copyright (c) 2022-Current TANG Tianhao <tth502025390@gmail.com>
 # Copyright (c) 2022-Current Jialiang Wang <jilwang804@gmail.com>
 # License: TBD
-
+import os
+os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+import logging
 import argparse
 import pickle
 import time
@@ -20,8 +22,8 @@ if 1:
 
     # General config
     parser.add_argument('--dataset', type=str, default='retailrocket',
-                        choices=['diginetica', 'yoochoose1_4', 'yoochoose1_64', 'retailrocket'],
-                        help='dataset name: diginetica/yoochoose1_4/yoochoose1_64/retailrocket.')
+                        choices=['diginetica', 'yoochoose1_4', 'yoochoose1_64', 'retailrocket', '30music', 'aotm', 'clef', 'rsc15', 'nowplaying', 'tmall', 'xing'],
+                        help='dataset name: diginetica/yoochoose1_4/yoochoose1_64/retailrocket/30music.')
     parser.add_argument('--batch_size', type=int, default=100,
                         help='Input batch size.')
     parser.add_argument('--n_hid', type=int, default=100,
@@ -94,6 +96,18 @@ def main():
         n_node = 37484
     elif args.dataset == 'retailrocket':
         n_node = 466868
+    elif args.dataset == '30music':
+        n_node = 137942
+    elif args.dataset == 'aotm':
+        n_node = 53949
+    elif args.dataset == 'clef':
+        n_node = 1498
+    elif args.dataset == 'nowplaying':
+        n_node = 60861
+    elif args.dataset == 'tmall':
+        n_node = 622678
+    elif args.dataset == 'xing':
+        n_node = 351111
     else:
         n_node = 0
 
