@@ -1,3 +1,5 @@
+# Copyright (c) 2022-Current TANG Tianhao <tth502025390@gmail.com>
+# License: TBD
 
 import argparse
 import pickle
@@ -34,8 +36,16 @@ def main():
     print(train_data_norm[idx].edge_weight)
     print(train_data_norm[idx].n_node)
 
-    loader = DataLoader(train_data, 100)
+    loader = DataLoader(train_data, 10)
     print(loader)
+    for batch in loader:
+        print(batch)
+        print(batch.x)
+        print(batch.edge_index)
+        print(batch.y)
+        print(batch.batch)
+        print(batch.ptr)
+        break
 
 if __name__ == '__main__':
     main()
