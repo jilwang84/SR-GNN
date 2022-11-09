@@ -71,7 +71,7 @@ class SR_GNN(nn.Module):
         # (1) - (5)
         # Learning item embeddings on session graphs
         # The gated graph convolution operator
-        v = self.ggc(embedding, data.edge_index)
+        v = self.ggc(embedding, data.edge_index, data.edge_weight)
 
         # Generating session embeddings
         n_items_in_sessions = torch.bincount(data.batch)
@@ -109,10 +109,11 @@ class SR_GNN(nn.Module):
 
 
 # Train function
-def train(model, train_data_loader, device, top_k, validation_data_loader=None):
+def train(model, train_data_loader, device, top_k, validation_data_loader=None, result_saver=None):
 
     # Switch to training mode
     model.train()
+    best_hit = 0
 
     # Initialize data components
     for epoch in range(model.max_epoch):
@@ -131,12 +132,18 @@ def train(model, train_data_loader, device, top_k, validation_data_loader=None):
             # Update the variables according to the optimizer and the gradients calculated by the above loss function
             model.optimizer.step()
 
-            if i % 1000 == 0:
+            if i % 500 == 0:
                 if validation_data_loader:
                     with torch.no_grad():
                         hit, mrr = test(model, validation_data_loader, device, top_k)
                     print('Epoch:', epoch + 1, 'Batch:', i + 1, 'Train Loss:', train_loss.item(), 'Top', top_k,
                           'Precision:', hit, 'Mean Reciprocal Rank:', mrr)
+
+                    # Save the model parameter with best hit
+                    if epoch > 0 and hit > best_hit:
+                        result_saver.data = model.state_dict()
+                        result_saver.save_learned_model()
+                        best_hit = hit
                 else:
                     print('Epoch:', epoch + 1, 'Batch:', i + 1, 'Train Loss:', train_loss.item())
 
@@ -146,7 +153,11 @@ def train(model, train_data_loader, device, top_k, validation_data_loader=None):
 
 
 # Test function
-def test(model, test_data_loader, device, top_k):
+def test(model, test_data_loader, device, top_k, best_model_path=None):
+
+    # Load the best model if provided
+    if best_model_path:
+        model.load_state_dict(torch.load(best_model_path))
 
     # Switch to testing mode
     model.eval()

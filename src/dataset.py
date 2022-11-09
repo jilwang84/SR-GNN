@@ -91,7 +91,7 @@ class SessionDataset(Dataset):
         
         if self.need_norm:
             # If zero length return zero length 
-            edge_weight = torch.zeros(edge_index.size(1), dtype=torch.float64)
+            edge_weight = torch.zeros(edge_index.size(1), dtype=torch.float32)
             if edge_index.size(1) >= 1:
                 for node in np.arange(len(nodes)):
                     edge_weight[edge_index[0] == node] = 1.0 / _in_c[node] if node in _in_c.keys() else 1.0
