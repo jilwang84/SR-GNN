@@ -12,6 +12,7 @@ url = {http://arxiv.org/abs/1811.00855}
 '''
 
 # Copyright (c) 2022-Current Jialiang Wang <jilwang804@gmail.com>
+# Copyright (c) 2022-Current TANG Tianhao <tth502025390@gmail.com>
 # License: TBD
 
 import math
@@ -20,6 +21,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch_geometric.nn import GatedGraphConv
+from tqdm import tqdm
 
 
 class SR_GNN(nn.Module):
@@ -109,7 +111,7 @@ class SR_GNN(nn.Module):
 
 
 # Train function
-def train(model, train_data_loader, device, top_k, validation_data_loader=None, result_saver=None):
+def train(model, train_data_loader, device, top_k, validation_data_loader=None, result_saver=None, logger=None):
 
     # Switch to training mode
     model.train()
@@ -118,7 +120,11 @@ def train(model, train_data_loader, device, top_k, validation_data_loader=None, 
     # Initialize data components
     for epoch in range(model.max_epoch):
         train_loss = -1
-        for i, batch in enumerate(train_data_loader):
+        tbar = tqdm(enumerate(train_data_loader), total=len(train_data_loader), dynamic_ncols=True)
+        for i, batch in tbar:
+            # Set prefix
+            tbar.set_description('Epoch %d: Current loss: %4f' % (epoch + 1, train_loss))
+
             # Forward step
             y_pred = model(batch.to(device))
 
@@ -132,12 +138,14 @@ def train(model, train_data_loader, device, top_k, validation_data_loader=None, 
             # Update the variables according to the optimizer and the gradients calculated by the above loss function
             model.optimizer.step()
 
-            if i % 500 == 0:
+            if (i + 1) % 500 == 0:
                 if validation_data_loader:
                     with torch.no_grad():
-                        hit, mrr = test(model, validation_data_loader, device, top_k)
+                        hit, mrr = test(model, validation_data_loader, device, top_k, logger=logger)
                     print('Epoch:', epoch + 1, 'Batch:', i + 1, 'Train Loss:', train_loss.item(), 'Top', top_k,
-                          'Precision:', hit, 'Mean Reciprocal Rank:', mrr)
+                        'Precision:', hit, 'Mean Reciprocal Rank:', mrr)
+                    logger.info('Epoch: ' + str(epoch + 1) + ' Batch: ' + str(i + 1) + ' Train Loss: ' + str(train_loss.item()) + ' Top ' + str(top_k) +
+                        ' Precision: ' + str(hit) + ' Mean Reciprocal Rank: ' + str(mrr))
 
                     # Save the model parameter with best hit
                     if epoch > 0 and hit > best_hit:
@@ -146,6 +154,7 @@ def train(model, train_data_loader, device, top_k, validation_data_loader=None, 
                         best_hit = hit
                 else:
                     print('Epoch:', epoch + 1, 'Batch:', i + 1, 'Train Loss:', train_loss.item())
+                    logger.info('Epoch: ' + str(epoch + 1) + ' Batch: ' + str(i + 1) + ' Train Loss: ' + str(train_loss.item()))
 
         model.training_loss.append(train_loss.item())
 
@@ -153,7 +162,7 @@ def train(model, train_data_loader, device, top_k, validation_data_loader=None, 
 
 
 # Test function
-def test(model, test_data_loader, device, top_k, best_model_path=None):
+def test(model, test_data_loader, device, top_k, best_model_path=None, logger=None):
 
     # Load the best model if provided
     if best_model_path:
@@ -164,7 +173,8 @@ def test(model, test_data_loader, device, top_k, best_model_path=None):
 
     hit, mrr = [], []
 
-    for i, batch in enumerate(test_data_loader):
+    for i, batch in tqdm(enumerate(test_data_loader), total=len(test_data_loader), 
+            desc="Valid/Test phase", dynamic_ncols=True):
         # Forward step
         scores = model(batch.to(device))
         labels = batch.y - 1
