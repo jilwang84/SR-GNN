@@ -27,16 +27,20 @@ import numpy as np
 import random
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--valid_portion', type=float, default=0.1, help='split the portion of training set as validation set')
+parser.add_argument('--valid_portion', type=float, default=0, help='split the portion of training set as validation set')
 parser.add_argument('--test_portion', type=float, default=0.1, help='split the portion of the whole set as testing set')
 parser.add_argument('--train_fraction', type=float, default=1, help='training fraction, in the paper uses 4 and 64')
 parser.add_argument('--item_threshold', type=int, default = 5, help='the parameter represents the number of frequencies that item should have for not being filtered')
 parser.add_argument('--dataset', default='sample_train-item-views', help='dataset name')
 parser.add_argument('--path', default='sample_train-item-views.csv', help='the path of the data file')
+parser.add_argument('--partial_inforce', type=bool, default=False, help="if ixtracts all partial sessions from the sessions or not")
+parser.add_argument('--item_renumber', type=bool, default=False, help="renumber the item to start with 1")
+parser.add_argument('--prep_vis', type=str, default="new", help="old preprocess version or new preprocess version")
+parser.add_argument('--shuffle', default=False, help="Shuffle the training set")
 opt = parser.parse_args()
 print(opt)
 
-if(opt.dataset in ["30music", "atom", "nowplaying", "tmall", "rsc15"]):
+if(opt.dataset in ["30music", "aotm", "nowplaying", "tmall", "rsc15"]):
     argument = ["\t", "UserId", "SessionId", "ItemId", "Time"]
 elif(opt.dataset in ["xing"]):
     argument = ["\t", "user_id", "user_id", "item_id", "created_at"]
@@ -58,6 +62,11 @@ Delimter = argument[0]
 sessionIdName = argument[2]
 itemIdName = argument[3]
 timestampLabel = argument[4]
+
+partial_inforce = opt.partial_inforce
+item_renumber = opt.item_renumber
+prep_vis = opt.prep_vis
+shuffle = opt.shuffle
 
 print("-- Starting @ %ss" % datetime.datetime.now())
 # with open(dataset, "r") as f:
@@ -94,6 +103,7 @@ with open(path, "r") as f:
         sorted_clicks = sorted(sess_clicks[i], key = operator.itemgetter(1))
         sess_clicks[i] = [c[0] for c in sorted_clicks]
 
+print("Length of the original sess_clicks is: %d" % len(sess_clicks))
 # For session with length 1, there is no sequential item click
 # Hence filter out these session
 for s in list(sess_clicks):
@@ -111,7 +121,8 @@ for s in sess_clicks:
         else:
             itemId_counts[item] = 1
 
-# Choosing item count >=item_threshold gives approximately the same number of items as reported in paper
+print("Length of sorted_itemId_counts is: %d" % len(itemId_counts))
+# Choosing item count >= item_threshold gives approximately the same number of items as reported in paper
 for s in list(sess_clicks):
     curseq = sess_clicks[s]
     filseq = list(filter(lambda i: itemId_counts[i] >= item_threshold, curseq))
@@ -121,7 +132,7 @@ for s in list(sess_clicks):
         sess_clicks[s] = filseq
 
 print("Length of second filtered sess_clicks is: %d" % len(sess_clicks))
-
+print("The first 10 of the sess_clicks: ", list(sess_clicks)[:10])
 # Split the training set, validation set and test set
 def dict_slice(adict, start, end):
     keys = list(adict.keys())
@@ -139,7 +150,7 @@ print("The length of test_session %d" % len(test_session))
 
 # Convert training sessions to sequences and renumber items to start from 1
 item_dict = {}
-def obtain_train(session_set):
+def obtain_train(session_set, renumber):
     train_ids = []
     train_seqs = []
     item_ctr = 1
@@ -147,38 +158,100 @@ def obtain_train(session_set):
         seq = sess_clicks[s]
         outseq = []
         for i in seq:
-            if i in item_dict:
-                outseq += [item_dict[i]]
+            if(not renumber):
+                outseq += [int(i)]
+                if i not in item_dict:
+                    item_dict[i] = 1
+                else:
+                    item_dict[i] += 1
             else:
-                outseq += [item_ctr]
-                item_dict[i] = item_ctr
-                item_ctr += 1
+                if i in item_dict:
+                    outseq += [item_dict[i]]
+                else:
+                    outseq += [item_ctr]
+                    item_dict[i] = item_ctr
+                    item_ctr += 1
         if len(outseq) < 2:  # Doesn't occur
             continue
         train_ids += [s]
         train_seqs += [outseq]
-    print("total item count is: %d" % item_ctr)     # 43098, 37484
-    return train_ids, train_seqs, item_ctr
+    print("total item count is: %d" % len(item_dict))     # 43098, 37484
+    return train_ids, train_seqs, len(item_dict)
 
 # Convert test sessions to sequences, ignoring items that do not appear in training set
-def obtian_test():
+def obtian_test(renumber):
     test_ids = []
     test_seqs = []
     for s in test_session:
         seq = sess_clicks[s]
         outseq = []
-        for i in seq:
-            if i in item_dict:
-                outseq += [item_dict[i]]
+        if(not renumber):
+            for i in seq:
+                if i in item_dict:
+                    outseq += [int(i)]
+        else:
+            for i in seq:
+                if i in item_dict:
+                    outseq += [item_dict[i]]
         if len(outseq) < 2:
             continue
         test_ids += [s]
         test_seqs += [outseq]
     return test_ids, test_seqs
 
-train_ids, train_seqs, num_node = obtain_train(train_session)
-valid_ids, valid_seqs, valid_node = obtain_train(valid_session)
-test_ids, test_seqs = obtian_test()
+train_ids, train_seqs, num_node = obtain_train(train_session, item_renumber)
+valid_ids, valid_seqs, valid_node = obtain_train(valid_session, item_renumber)
+test_ids, test_seqs = obtian_test(False)
+
+def extract_subsessions(sessions):
+    """Extracts all partial sessions from the sessions given.
+
+    For example, a session (1, 2, 3) should be augemnted to produce two
+    separate sessions (1, 2) and (1, 2, 3).
+    """
+    all_sessions = []
+    for session in sessions:
+        for i in range(1, len(session)):
+            all_sessions.append(session[:i+1])
+    return all_sessions
+
+# don't use this function, the running time will be too long
+def obtain_node(sessions):
+    item_set=[]
+    ctr = 0
+    for session in sessions:
+        for item in session:
+            if(item not in item_set):
+                item_set.append(item)
+                ctr += 1
+    return ctr
+
+if(prep_vis == "new"):
+    if(shuffle):
+        seed = 18
+        random.Random(seed).shuffle(train_seqs)
+        random.Random(seed).shuffle(train_ids)
+    if(partial_inforce):
+        train_seqs = extract_subsessions(train_seqs)
+        valid_seqs = extract_subsessions(valid_seqs)
+        test_seqs = extract_subsessions(test_seqs)
+    split = int(len(train_seqs) / train_fraction)
+    train_seqs = train_seqs[:split]
+    valid_seqs = valid_seqs[:split]
+    print("The first 10 train ids is: ", train_ids[:10])
+    print("The first 10 train seqs is: ", train_seqs[:10])
+    print("The first 10 test seqs is: ", test_seqs[:10])
+    print("The num_node is: ", num_node)
+    dir_title = 'output_'+str(train_fraction)
+    if not os.path.exists(dir_title):
+        os.makedirs(dir_title)
+    pickle.dump(train_seqs, open('%s/train.txt' % dir_title, 'wb'))
+    pickle.dump(valid_seqs, open('%s/valid.txt' % dir_title, 'wb'))
+    pickle.dump(test_seqs, open('%s/test.txt' % dir_title, 'wb'))
+    with open('%s/number_of_node.txt' % dir_title, 'w') as f:
+        f.write(str(num_node))
+    print('Done')
+    exit()
 
 # Below code is not modified, used to further process the data for further encoding
 def process_seqs(iseqs):
@@ -202,6 +275,7 @@ test = (pro_test_seqs, pro_test_seqs)
 print("The length of training sequences is: %s" % len(pro_train_seqs))
 print("The length of validation sequences is: %s" % len(pro_valid_seqs))
 print("The length of testing sequences is: %s" % len(pro_test_seqs))
+print(pro_train_seqs[:5], pro_train_labs[:5], pro_train_ids[:5])
 
 def total_length(seqs):
     all = 0
@@ -213,7 +287,6 @@ print('Average length in each training session is: ', (total_length(train_seqs))
 print("The length of total training sequences is: %s" % total_length(pro_train_seqs))
 print("The length of total validation sequences is: %s" % total_length(pro_valid_seqs))
 print("The length of total testing sequences is: %s" % total_length(pro_test_seqs))
-
 # Output of the train.txt, valid.txt, test.txt
 dir_title = 'output_'+str(train_fraction)
 if not os.path.exists(dir_title):
