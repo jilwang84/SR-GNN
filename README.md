@@ -1,6 +1,6 @@
-#SR-GNN Model Implementation
+__SR-GNN Model Implementation__
 
-##Usage
+**Usage**
 Data preprocessing:
 
 `cd .\datasets\`
@@ -20,7 +20,7 @@ matplotlib
 tqdm
 ```
 
-##Citation
+**Citation**
 
 ```
 @inproceedings{Wu:2019ke,
