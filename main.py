@@ -99,6 +99,14 @@ def main():
     train_data = pickle.load(
         open('datasets/' + args.dataset + '/Train_Fraction_' + str(args.train_fraction) + '/train.txt', 'rb'))
     valid_data_loader = None
+
+    train_set_x, train_set_y = [], []
+    for session in train_data:
+        session, y = session[:-1], session[-1]
+        train_set_x.append(session)
+        train_set_y.append(y)
+    train_data = (train_set_x, train_set_y)
+
     if not args.fast_mode:
         train_data, valid_data = split_validation(train_data, args.valid_portion)
         valid_data = SessionDataset(args.dataset, valid_data)
@@ -108,6 +116,14 @@ def main():
     # Loading training and testing data
     test_data = pickle.load(
         open('datasets/' + args.dataset + '/Train_Fraction_' + str(args.train_fraction) + '/test.txt', 'rb'))
+
+    test_set_x, test_set_y = [], []
+    for session in test_data:
+        session, y = session[:-1], session[-1]
+        test_set_x.append(session)
+        test_set_y.append(y)
+    test_data = (test_set_x, test_set_y)
+
     train_data = SessionDataset(args.dataset, train_data, need_norm=True)
     test_data = SessionDataset(args.dataset, test_data, need_norm=True)
     train_data_loader = DataLoader(train_data, args.batch_size, shuffle=True)
