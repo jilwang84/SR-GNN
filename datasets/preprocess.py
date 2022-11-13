@@ -154,16 +154,16 @@ def obtain_train(session_set, renumber):
     train_ids = []
     train_seqs = []
     item_ctr = 1
+    max_item_id = -1
     for s in session_set:
         seq = sess_clicks[s]
         outseq = []
         for i in seq:
-            if(not renumber):
+            if not renumber:
                 outseq += [int(i)]
+                max_item_id = int(i) if int(i) > max_item_id else max_item_id
                 if i not in item_dict:
-                    item_dict[i] = 1
-                else:
-                    item_dict[i] += 1
+                    item_dict[i] = int(i)
             else:
                 if i in item_dict:
                     outseq += [item_dict[i]]
@@ -175,8 +175,15 @@ def obtain_train(session_set, renumber):
             continue
         train_ids += [s]
         train_seqs += [outseq]
-    print("total item count is: %d" % len(item_dict))     # 43098, 37484
-    return train_ids, train_seqs, len(item_dict)
+
+    if not renumber:
+        print("total item count is: %d" % len(item_dict))     # 43098, 37484
+        print("Max item number ID: %d" % max_item_id)
+        return train_ids, train_seqs, (max_item_id + 1)
+    else:
+        print("total item count is: %d" % len(item_dict))     # 43098, 37484
+        print("Max item number ID: %d" % (item_ctr - 1)) 
+        return train_ids, train_seqs, item_ctr
 
 # Convert test sessions to sequences, ignoring items that do not appear in training set
 def obtian_test(renumber):

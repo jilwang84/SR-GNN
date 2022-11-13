@@ -6,7 +6,7 @@ Data preprocessing:
 
 `cd .\datasets\`
 
-`python .\preprocess.py --dataset $DATASET_NAME$ --path .\$DATASET_NAME$\$RAW_DATA_FILE_NAME$`
+`python .\preprocess.py --dataset $DATASET_NAME$ --path .\$DATASET_NAME$\$RAW_DATA_FILE_NAME$ --partial_inforce True`
 
 Training:
 
