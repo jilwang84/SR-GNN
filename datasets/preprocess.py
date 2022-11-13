@@ -242,7 +242,7 @@ if(prep_vis == "new"):
     print("The first 10 train seqs is: ", train_seqs[:10])
     print("The first 10 test seqs is: ", test_seqs[:10])
     print("The num_node is: ", num_node)
-    dir_title = 'output_'+str(train_fraction)
+    dir_title = os.path.split(path)[0] + '/Train_Fraction_' + str(train_fraction)
     if not os.path.exists(dir_title):
         os.makedirs(dir_title)
     pickle.dump(train_seqs, open('%s/train.txt' % dir_title, 'wb'))
@@ -288,7 +288,7 @@ print("The length of total training sequences is: %s" % total_length(pro_train_s
 print("The length of total validation sequences is: %s" % total_length(pro_valid_seqs))
 print("The length of total testing sequences is: %s" % total_length(pro_test_seqs))
 # Output of the train.txt, valid.txt, test.txt
-dir_title = 'output_'+str(train_fraction)
+dir_title = os.path.split(path)[0] + '/Train_Fraction_' + str(train_fraction)
 if not os.path.exists(dir_title):
     os.makedirs(dir_title)
 
