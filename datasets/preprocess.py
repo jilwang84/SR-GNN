@@ -11,6 +11,7 @@ url = {http://arxiv.org/abs/1811.00855}
 '''
 
 # Copyright (c) 2022-Current Zijun CHEN <zchendg@connect.ust.hk>
+# Copyright (c) 2022-Current Tianhao TANG <ttangae@connect.ust.hk>
 # License: TBD
 
 import argparse
@@ -37,6 +38,7 @@ parser.add_argument('--partial_inforce', type=bool, default=False, help="if ixtr
 parser.add_argument('--item_renumber', type=bool, default=False, help="renumber the item to start with 1")
 parser.add_argument('--prep_vis', type=str, default="new", help="old preprocess version or new preprocess version")
 parser.add_argument('--shuffle', default=False, help="Shuffle the training set")
+parser.add_argument('--split', type=str, default=None, help="Split and pick part of the dataset")
 opt = parser.parse_args()
 print(opt)
 
@@ -67,6 +69,8 @@ partial_inforce = opt.partial_inforce
 item_renumber = opt.item_renumber
 prep_vis = opt.prep_vis
 shuffle = opt.shuffle
+# New split
+split_config = opt.split
 
 print("-- Starting @ %ss" % datetime.datetime.now())
 # with open(dataset, "r") as f:
@@ -132,6 +136,22 @@ for s in list(sess_clicks):
         sess_clicks[s] = filseq
 
 print("Length of second filtered sess_clicks is: %d" % len(sess_clicks))
+
+# Split here, as the third filter. The difference between this and the train_fraction is that this will 
+# also change the size of the test set. The train_fraction cannot handle the case that if setting too large
+# it will makes the test set hard to be covered
+
+if split_config is not None:
+    split_config = split_config.split('/')
+    picked_part = int(split_config[0])
+    total_parts = int(split_config[1])
+    start_id = round(len(sess_clicks) / float(total_parts) * picked_part)
+    end_id = round(len(sess_clicks) / float(total_parts) * (picked_part + 1))
+    sess_clicks = list(sess_clicks.items())[start_id:end_id]
+    sess_clicks = {k:v for k, v in sess_clicks}
+
+print("Length of third filtered sess_clicks is: %d" % len(sess_clicks))
+
 print("The first 10 of the sess_clicks: ", list(sess_clicks)[:10])
 # Split the training set, validation set and test set
 def dict_slice(adict, start, end):
@@ -208,7 +228,7 @@ def obtian_test(renumber):
 
 train_ids, train_seqs, num_node = obtain_train(train_session, item_renumber)
 valid_ids, valid_seqs, valid_node = obtain_train(valid_session, item_renumber)
-test_ids, test_seqs = obtian_test(False)
+test_ids, test_seqs = obtian_test(item_renumber)
 
 def extract_subsessions(sessions):
     """Extracts all partial sessions from the sessions given.
