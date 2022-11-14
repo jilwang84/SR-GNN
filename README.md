@@ -8,9 +8,16 @@ Data preprocessing:
 
 `python .\preprocess.py --dataset $DATASET_NAME$ --path .\$DATASET_NAME$\$RAW_DATA_FILE_NAME$ --partial_inforce True`
 
+- `partial_inforce` is required for all the dataset
+- `train_fraction` is needed for some of the dataset
+- `item_renumber` is required for clef and rsc15, recommend for 30music
+- `split` is recommended to replace `train_fraction` to aoivd too large and unknown test set. Recommend for xing and tmall.
+
+
+
 Training:
 
-`python .\main.py --dataset $DATASET_NAME$ --batch_size 512 --epoch 50`
+`python .\main.py --dataset $DATASET_NAME$ --batch_size 512 --epoch 20 --train_fraction 4`
 
 Required packages:
 ```
