@@ -13,7 +13,12 @@ Data preprocessing:
 - `item_renumber` is required for clef and rsc15, recommend for 30music
 - `split` is recommended to replace `train_fraction` to aoivd too large and unknown test set. Recommend for xing and tmall.
 
-
+Some configuration recommendations:
+- 30music [threshold 2] (Need renumber): split: 1/8
+- clef (Need renumber): split: 1/16
+- rsc15 (Need renumber): split: 1/32
+- tmall: split: 1/128
+- xing : split: 1/64
 
 Training:
 
