@@ -60,6 +60,7 @@ if 1:
                         help='The number of steps after which the learning rate decay.')
     parser.add_argument('--l2', type=float, default=1e-5,
                         help='l2 penalty.')              # Suggested: [0.001, 0.0005, 0.0001, 0.00005, 0.00001]
+    parser.add_argument('--n_layers', type=int, default=1, help='GGNN layers')
 
     # TODO We haven't used them yet
     #parser.add_argument('--step', type=int, default=1, help='gnn propogation steps')
@@ -143,7 +144,7 @@ def main():
     # ---- Parameter Section -------------------------------
     device = torch.device('cuda') if args.use_cuda else torch.device('cpu')
     # Usage: SR_GNN(n_hid, n_node, epoch, lr, l2, lr_dc_step, lr_dc)
-    model = SR_GNN(args.n_hid, n_node, args.epoch, args.lr, args.l2, args.lr_dc_step, args.lr_dc).to(device)
+    model = SR_GNN(args.n_hid, n_node, args.epoch, args.lr, args.l2, args.lr_dc_step, args.lr_dc, args.n_layers).to(device)
     # ------------------------------------------------------
 
     # ---- Training Section --------------------------------

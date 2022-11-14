@@ -161,3 +161,7 @@ cython_debug/
 
 # Log folder
 log/
+results/*
+datasets/*/*.csv
+datasets/*/Train*/*.txt
+datasets/rsc15

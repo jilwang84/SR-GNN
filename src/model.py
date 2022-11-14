@@ -30,7 +30,7 @@ class SR_GNN(nn.Module):
     # loss_function: nn.CrossEntropyLoss()
     # optimizer: torch.optim.Adam(self.parameters(), lr=args.lr, weight_decay=args.wd)
     # scheduler: torch.optim.lr_scheduler.StepLR(optimizer, step_size=args.step, gamma=args.gamma)
-    def __init__(self, n_hid, n_node, epoch=30, lr=0.001, l2=1e-5, lr_dc_step=3, lr_dc=0.1):
+    def __init__(self, n_hid, n_node, epoch=30, lr=0.001, l2=1e-5, lr_dc_step=3, lr_dc=0.1, n_layers=1):
         super(SR_GNN, self).__init__()
         nn.Module.__init__(self)
 
@@ -39,7 +39,7 @@ class SR_GNN(nn.Module):
 
         # GatedGraphConv(out_channels: int, num_layers: int, aggr: str = 'add', bias: bool = True, **kwargs)
         self.embed = nn.Embedding(self.n_node, self.n_hidden)
-        self.ggc = GatedGraphConv(self.n_hidden, num_layers=1)
+        self.ggc = GatedGraphConv(self.n_hidden, num_layers=n_layers)
         self.W_1 = nn.Linear(self.n_hidden, self.n_hidden)
         self.W_2 = nn.Linear(self.n_hidden, self.n_hidden)
         self.q = nn.Linear(self.n_hidden, 1)
