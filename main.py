@@ -15,7 +15,8 @@ import matplotlib.pyplot as plt
 from torch_geometric.loader import DataLoader
 
 from src.dataset import SessionDataset, split_validation
-from src.model import SR_GNN, train, test
+from src.SR_GNN import SR_GNN, train, test
+from src.TA_GNN import TA_GNN, train, test
 from src.result_saver import Result_Saver, save_training_loss
 
 if not os.path.exists('./log'):
@@ -28,10 +29,13 @@ if 1:
     parser = argparse.ArgumentParser()
 
     # General config
+    parser.add_argument('--model', type=str, default='SR-GNN',
+                        choices=['SR-GNN', 'TA-GNN'],
+                        help='Use model: SR-GNN/TA-GNN.')
     parser.add_argument('--dataset', type=str, default='retailrocket',
                         choices=['sample', 'diginetica', 'yoochoose1_4', 'yoochoose1_64', 'retailrocket', 
                         '30music', 'rsc15', 'aotm', 'clef', 'nowplaying', 'tmall', 'xing'],
-                        help='dataset name: diginetica/yoochoose1_4/yoochoose1_64/retailrocket/30music/rsc15/aotm/clef/nowplaying/tmall/xing.')
+                        help='Dataset name: diginetica/yoochoose1_4/yoochoose1_64/retailrocket/30music/rsc15/aotm/clef/nowplaying/tmall/xing.')
     parser.add_argument('--train_fraction', type=int, default=1,
                         help='Will search train.txt and test.txt in folder datasets/dataset_name/Train_Fraction_*/')
     parser.add_argument('--batch_size', type=int, default=100,
@@ -132,8 +136,8 @@ def main():
 
     logger.info('Prepare dataloader done.')
     # Prepare model saver
-    result_saver = Result_Saver('SR-GNN Model Saver', 'Model Parameters')
-    result_saver.result_destination_file_path = 'results/SR-GNN_' + args.dataset + '_model'
+    result_saver = Result_Saver(args.model + ' Model Saver', 'Model Parameters')
+    result_saver.result_destination_file_path = 'results/' + args.model + '_' + args.dataset + '_model'
 
     # Read the number of nodes from the file
     f = open('datasets/' + args.dataset + '/Train_Fraction_' + str(args.train_fraction) + '/number_of_node.txt', 'r')
@@ -143,8 +147,13 @@ def main():
 
     # ---- Parameter Section -------------------------------
     device = torch.device('cuda') if args.use_cuda else torch.device('cpu')
-    # Usage: SR_GNN(n_hid, n_node, epoch, lr, l2, lr_dc_step, lr_dc)
-    model = SR_GNN(args.n_hid, n_node, args.epoch, args.lr, args.l2, args.lr_dc_step, args.lr_dc, args.n_layers).to(device)
+    # Usage: model(n_hid, n_node, epoch, lr, l2, lr_dc_step, lr_dc)
+    if args.model == 'TA-GNN':
+        model = TA_GNN(args.n_hid, n_node, args.epoch, args.lr, args.l2, args.lr_dc_step, args.lr_dc, args.n_layers).to(
+            device)
+    else:
+        model = SR_GNN(args.n_hid, n_node, args.epoch, args.lr, args.l2, args.lr_dc_step, args.lr_dc, args.n_layers).to(
+            device)
     # ------------------------------------------------------
 
     # ---- Training Section --------------------------------
@@ -159,7 +168,8 @@ def main():
     logger.info("Run time: %f s" % (end - start))
 
     # Training loss plot
-    save_training_loss(model.training_loss, 'results/SR-GNN_' + datetime.now().strftime(time_format) + '_' + args.dataset + '_training_loss.txt')
+    save_training_loss(model.training_loss, 'results/' + args.model + '_' + datetime.now().strftime(time_format) + '_' +
+                       args.dataset + '_training_loss.txt')
     plt.figure(figsize=(10, 5))
     plt.title("Training Loss")
     plt.plot(model.training_loss)
@@ -175,11 +185,12 @@ def main():
     t_start = time.time()
     print('************ Testing Start *************')
     logger.info('************ Testing Start *************')
-    hit, mrr = test(model, test_data_loader, device, args.top_k, 'results/SR-GNN_' + args.dataset + '_model.pth', logger)
+    hit, mrr = test(model, test_data_loader, device, args.top_k, 'results/' + args.model + '_' + args.dataset +
+                    '_model.pth', logger)
     print('************ Overall Performance *******')
     logger.info('************ Overall Performance *******')
-    print('SR-GNN Precision:', str(hit), 'Mean Reciprocal Rank:', str(mrr))
-    logger.info('SR-GNN Precision: ' + str(hit) + ' Mean Reciprocal Rank: ' + str(mrr))
+    print(args.model, 'Precision:', str(hit), 'Mean Reciprocal Rank:', str(mrr))
+    logger.info(args.model + ' Precision: ' + str(hit) + ' Mean Reciprocal Rank: ' + str(mrr))
     t_end = time.time()
     print("Test time: %f s" % (t_end - t_start))
     logger.info("Test time: %f s" % (t_end - t_start))

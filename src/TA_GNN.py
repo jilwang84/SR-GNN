@@ -1,13 +1,12 @@
 '''
-MethodModule class for Gated Graph Sequence Neural Networks on Session-based Recommendation Task
+MethodModule class for Target Attentive Graph Neural Network on Session-based Recommendation Task
 
-@inproceedings{Wu:2019vb,
-author = {Wu, Shu and Tang, Yuyuan and Zhu, Yanqiao and Wang, Liang and Xie, Xing and Tan, Tieniu},
-title = {Session-based Recommendation with Graph Neural Networks},
-booktitle = {Proceedings of The Twenty-Third AAAI Conference on Artificial Intelligence},
-series = {AAAI '19},
-year = {2019},
-url = {http://arxiv.org/abs/1811.00855}
+@inproceedings{yu2020tagnn,
+  title={TAGNN: target attentive graph neural networks for session-based recommendation},
+  author={Yu, Feng and Zhu, Yanqiao and Liu, Qiang and Wu, Shu and Wang, Liang and Tan, Tieniu},
+  booktitle={Proceedings of the 43rd international ACM SIGIR conference on research and development in information retrieval},
+  pages={1921--1924},
+  year={2020}
 }
 '''
 
@@ -20,18 +19,16 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
+import torch.nn.functional as F
 from torch_geometric.nn import GatedGraphConv
 from tqdm import tqdm
 
 
-class SR_GNN(nn.Module):
+class TA_GNN(nn.Module):
 
     # Initialization function
-    # loss_function: nn.CrossEntropyLoss()
-    # optimizer: torch.optim.Adam(self.parameters(), lr=args.lr, weight_decay=args.wd)
-    # scheduler: torch.optim.lr_scheduler.StepLR(optimizer, step_size=args.step, gamma=args.gamma)
     def __init__(self, n_hid, n_node, epoch=30, lr=0.001, l2=1e-5, lr_dc_step=3, lr_dc=0.1, n_layers=1):
-        super(SR_GNN, self).__init__()
+        super(TA_GNN, self).__init__()
         nn.Module.__init__(self)
 
         self.n_hidden = n_hid
@@ -42,13 +39,11 @@ class SR_GNN(nn.Module):
         self.ggc = GatedGraphConv(self.n_hidden, num_layers=n_layers)
         self.W_1 = nn.Linear(self.n_hidden, self.n_hidden)
         self.W_2 = nn.Linear(self.n_hidden, self.n_hidden)
+        self.W_t = nn.Linear(self.n_hidden, self.n_hidden)
         self.q = nn.Linear(self.n_hidden, 1)
         self.W_3 = nn.Linear(2 * self.n_hidden, self.n_hidden)
 
         self.max_epoch = epoch
-        # self.loss_function = loss_function
-        # self.optimizer = optimizer
-        # self.scheduler = scheduler
         self.loss_function = nn.CrossEntropyLoss()
         self.optimizer = optim.Adam(self.parameters(), lr=lr, weight_decay=l2)
         self.scheduler = optim.lr_scheduler.StepLR(self.optimizer, step_size=lr_dc_step, gamma=lr_dc)
@@ -80,18 +75,23 @@ class SR_GNN(nn.Module):
         v_by_sessions = torch.split(v, list(n_items_in_sessions))
 
         # s_l: the list of last-clicked item in each session; v_n
-        s_l, v_n = [], []
+        s_l, v_n, s_t = [], [], []
         for s in v_by_sessions:
             s_l.append(s[-1])
             v_n.append(s[-1].view(-1).repeat(s.shape[0], 1))
 
+            # (6)
+            s_t.append(torch.mm(F.softmax(torch.mm(self.embed.weight, self.W_t(s).transpose(1, 0)), -1), s))
+
         s_l = torch.stack(s_l, dim=0)
         v_n = torch.cat(v_n, dim=0)
+        s_t = torch.stack(s_t, dim=0)
 
-        # (6)
+        # (8)
         alpha = self.q(torch.sigmoid(self.W_1(v_n) + self.W_2(v)))
         s_g_split = torch.split(alpha * v, list(n_items_in_sessions))
 
+        # (9)
         s_g = []
         for s in s_g_split:
             s_g_sum = torch.sum(s, dim=0)
@@ -99,13 +99,15 @@ class SR_GNN(nn.Module):
 
         s_g = torch.stack(s_g, dim=0)
 
-        # (7)
+        # (10)
         s_h = self.W_3(torch.cat([s_l, s_g], dim=-1))
+        s_h = s_h.view(s_g.shape[0], 1, s_g.shape[1])
 
         # Making recommendation
-        # (8)
+        # (7) (10) (11)
         # Multiply each candidate item's embedding by session representation s_h
-        z = torch.mm(s_h, self.embed.weight.transpose(1, 0))
+        s_h = s_h + s_t
+        z = torch.sum(s_h * self.embed.weight, -1)
 
         return z
 
@@ -129,7 +131,7 @@ def train(model, train_data_loader, device, top_k, validation_data_loader=None, 
             y_pred = model(batch.to(device))
 
             # Calculate the training loss
-            train_loss = model.loss_function(y_pred, batch.y.to(device) )
+            train_loss = model.loss_function(y_pred, batch.y.to(device))
             model.optimizer.zero_grad()
 
             # Backward step: error backpropagation
@@ -144,8 +146,9 @@ def train(model, train_data_loader, device, top_k, validation_data_loader=None, 
                         hit, mrr = test(model, validation_data_loader, device, top_k, logger=logger)
                     print('Epoch:', epoch + 1, 'Batch:', i + 1, 'Train Loss:', train_loss.item(), 'Top', top_k,
                         'Precision:', hit, 'Mean Reciprocal Rank:', mrr)
-                    logger.info('Epoch: ' + str(epoch + 1) + ' Batch: ' + str(i + 1) + ' Train Loss: ' + str(train_loss.item()) + ' Top ' + str(top_k) +
-                        ' Precision: ' + str(hit) + ' Mean Reciprocal Rank: ' + str(mrr))
+                    logger.info('Epoch: ' + str(epoch + 1) + ' Batch: ' + str(i + 1) +
+                                ' Train Loss: ' + str(train_loss.item()) + ' Top ' + str(top_k) +
+                                ' Precision: ' + str(hit) + ' Mean Reciprocal Rank: ' + str(mrr))
 
                     # Save the model parameter with best hit
                     if epoch > 0 and hit > best_hit:
@@ -154,7 +157,8 @@ def train(model, train_data_loader, device, top_k, validation_data_loader=None, 
                         best_hit = hit
                 else:
                     print('Epoch:', epoch + 1, 'Batch:', i + 1, 'Train Loss:', train_loss.item())
-                    logger.info('Epoch: ' + str(epoch + 1) + ' Batch: ' + str(i + 1) + ' Train Loss: ' + str(train_loss.item()))
+                    logger.info('Epoch: ' + str(epoch + 1) + ' Batch: ' + str(i + 1) +
+                                ' Train Loss: ' + str(train_loss.item()))
 
         model.training_loss.append(train_loss.item())
 
