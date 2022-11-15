@@ -172,6 +172,7 @@ def main():
     # ------------------------------------------------------
 
     # ---- Testing Section ---------------------------------
+    t_start = time.time()
     print('************ Testing Start *************')
     logger.info('************ Testing Start *************')
     hit, mrr = test(model, test_data_loader, device, args.top_k, 'results/SR-GNN_' + args.dataset + '_model.pth', logger)
@@ -179,6 +180,9 @@ def main():
     logger.info('************ Overall Performance *******')
     print('SR-GNN Precision:', str(hit), 'Mean Reciprocal Rank:', str(mrr))
     logger.info('SR-GNN Precision: ' + str(hit) + ' Mean Reciprocal Rank: ' + str(mrr))
+    t_end = time.time()
+    print("Run time: %f s" % (t_end - t_start))
+    logger.info("Test time: %f s" % (t_end - t_start))
     print('************ Finish ********************')
     logger.info('************ Finish ********************')
     # ------------------------------------------------------
