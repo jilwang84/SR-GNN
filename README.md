@@ -1,4 +1,4 @@
-__SR-GNN Model Implementation__
+__SR-GNN & TA-GNN Model Implementation__
 
 **Usage**
 
@@ -28,7 +28,7 @@ It seems that 5 to 10 epoches would achieve good results
 
 Training:
 
-`python .\main.py --dataset $DATASET_NAME$ --batch_size 512 --epoch 5`
+`python .\main.py --model SR-GNN --dataset $DATASET_NAME$ --batch_size 512 --epoch 5`
 
 Required packages:
 ```
@@ -42,20 +42,21 @@ tqdm
 **Citation**
 
 ```
-@inproceedings{Wu:2019ke,
-title = {{Session-based Recommendation with Graph Neural Networks}},
-author = {Wu, Shu and Tang, Yuyuan and Zhu, Yanqiao and Wang, Liang and Xie, Xing and Tan, Tieniu},
-year = 2019,
-booktitle = {Proceedings of the Twenty-Third AAAI Conference on Artificial Intelligence},
-location = {Honolulu, HI, USA},
-month = jul,
-volume = 33,
-number = 1,
-series = {AAAI '19},
-pages = {346--353},
-url = {https://aaai.org/ojs/index.php/AAAI/article/view/3804},
-doi = {10.1609/aaai.v33i01.3301346},
-editor = {Pascal Van Hentenryck and Zhi-Hua Zhou},
+@inproceedings{wu2019session,
+  title={Session-based recommendation with graph neural networks},
+  author={Wu, Shu and Tang, Yuyuan and Zhu, Yanqiao and Wang, Liang and Xie, Xing and Tan, Tieniu},
+  booktitle={Proceedings of the AAAI conference on artificial intelligence},
+  volume={33},
+  number={01},
+  pages={346--353},
+  year={2019}
+}
+@inproceedings{yu2020tagnn,
+  title={TAGNN: target attentive graph neural networks for session-based recommendation},
+  author={Yu, Feng and Zhu, Yanqiao and Liu, Qiang and Wu, Shu and Wang, Liang and Tan, Tieniu},
+  booktitle={Proceedings of the 43rd international ACM SIGIR conference on research and development in information retrieval},
+  pages={1921--1924},
+  year={2020}
 }
 ```
 
