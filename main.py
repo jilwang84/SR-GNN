@@ -181,7 +181,7 @@ def main():
     print('SR-GNN Precision:', str(hit), 'Mean Reciprocal Rank:', str(mrr))
     logger.info('SR-GNN Precision: ' + str(hit) + ' Mean Reciprocal Rank: ' + str(mrr))
     t_end = time.time()
-    print("Run time: %f s" % (t_end - t_start))
+    print("Test time: %f s" % (t_end - t_start))
     logger.info("Test time: %f s" % (t_end - t_start))
     print('************ Finish ********************')
     logger.info('************ Finish ********************')

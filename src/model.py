@@ -129,7 +129,7 @@ def train(model, train_data_loader, device, top_k, validation_data_loader=None, 
             y_pred = model(batch.to(device))
 
             # Calculate the training loss
-            train_loss = model.loss_function(y_pred, batch.y.to(device) - 1)
+            train_loss = model.loss_function(y_pred, batch.y.to(device) )
             model.optimizer.zero_grad()
 
             # Backward step: error backpropagation
@@ -177,7 +177,7 @@ def test(model, test_data_loader, device, top_k, best_model_path=None, logger=No
             desc="Valid/Test phase", dynamic_ncols=True):
         # Forward step
         scores = model(batch.to(device))
-        labels = batch.y - 1
+        labels = batch.y
 
         # Find top-k item scores
         top_scores = scores.topk(top_k)[1]
